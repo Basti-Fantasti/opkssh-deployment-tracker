@@ -1,0 +1,22 @@
+# opkssh Deployment Tracker Configuration
+# Copy this file to config.toml and adjust settings
+
+[server]
+# Host to bind to (use 0.0.0.0 for all interfaces)
+host = "0.0.0.0"
+# Port to listen on
+port = 8080
+
+[auth]
+# Enable basic authentication (recommended when exposed to internet)
+enabled = true
+# Username for basic auth
+username = "admin"
+# Password for basic auth (CHANGE THIS!)
+password = "your-secure-password-here"
+
+[ssh_config]
+# Default hostname mode for SSH config generation
+# "hostname" = use hostname as HostName (default)
+# "ip" = use IP address as HostName
+default_use_hostname = true

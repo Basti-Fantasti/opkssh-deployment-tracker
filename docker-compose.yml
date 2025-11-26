@@ -1,0 +1,30 @@
+services:
+  opkssh-tracker:
+    image: ghcr.io/basti-fantasti/opkssh-tracker:latest
+    container_name: opkssh-tracker
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persistent data storage
+      - ./data:/data
+      # Configuration file (create from config.toml.example)
+      - ./config.toml:/app/config.toml:ro
+    environment:
+      - DATA_DIR=/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - opkssh-network
+
+networks:
+  opkssh-network:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
