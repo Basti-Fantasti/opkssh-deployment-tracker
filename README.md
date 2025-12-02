@@ -63,6 +63,10 @@ The result? Secure, modern SSH authentication without the hassle of key manageme
 
 ---
 
+## Changes
+
+Latest changes can be found in the [Changelog](CHANGELOG.md)
+
 ## Server Setup
 
 The tracking server runs as a Docker container using a pre-built image.
