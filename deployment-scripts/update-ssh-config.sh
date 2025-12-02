@@ -24,6 +24,7 @@ SSH_CONFIG_FILE="$HOME/.ssh/config"
 BACKUP_CONFIG=true
 PREFIX=""
 IDENTITY_FILE="~/.ssh/id_ecdsa"
+USE_HOSTNAME=""  # Empty = use server default, "true" = use hostname, "false" = use IP
 MARKER_START="# === OPKSSH MANAGED HOSTS START ==="
 MARKER_END="# === OPKSSH MANAGED HOSTS END ==="
 
@@ -50,6 +51,8 @@ Options:
     --config FILE         SSH config file to update (default: ~/.ssh/config)
     --prefix PREFIX       Prefix for host aliases (e.g., "opk-" -> "opk-hostname")
     --identity-file FILE  SSH identity file path (default: ~/.ssh/id_ecdsa)
+    --use-hostname        Use hostname in HostName field (IP shown as comment)
+    --use-ip              Use IP address in HostName field (hostname shown as comment)
     --no-backup           Don't create backup of existing config
     --dry-run             Show what would be added without modifying config
     --help                Show this help message
@@ -63,6 +66,12 @@ Examples:
 
     # With custom prefix and identity file
     $0 --tracker-url http://tracker:8080 --prefix "opk-" --identity-file ~/.ssh/opk_key
+
+    # Use IP addresses in HostName field instead of hostnames
+    $0 --tracker-url http://tracker:8080 --use-ip
+
+    # Use hostnames in HostName field
+    $0 --tracker-url http://tracker:8080 --use-hostname
 
     # Preview changes without applying
     $0 --tracker-url http://tracker:8080 --dry-run
@@ -100,6 +109,14 @@ while [[ $# -gt 0 ]]; do
             IDENTITY_FILE="$2"
             shift 2
             ;;
+        --use-hostname)
+            USE_HOSTNAME="true"
+            shift
+            ;;
+        --use-ip)
+            USE_HOSTNAME="false"
+            shift
+            ;;
         --no-backup)
             BACKUP_CONFIG=false
             shift
@@ -133,6 +150,9 @@ log_info "Fetching SSH config from tracker..."
 QUERY_PARAMS="identity_file=$(echo "$IDENTITY_FILE" | sed 's/~/%7E/g')"
 if [[ -n "$PREFIX" ]]; then
     QUERY_PARAMS="${QUERY_PARAMS}&prefix=$PREFIX"
+fi
+if [[ -n "$USE_HOSTNAME" ]]; then
+    QUERY_PARAMS="${QUERY_PARAMS}&use_hostname=$USE_HOSTNAME"
 fi
 
 # Build auth options if credentials provided

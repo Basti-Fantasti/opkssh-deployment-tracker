@@ -20,3 +20,8 @@ password = "your-secure-password-here"
 # "hostname" = use hostname as HostName (default)
 # "ip" = use IP address as HostName
 default_use_hostname = true
+
+# Default SSH Agent forwarding setting for new deployments
+# When true, new deployments will have ForwardAgent enabled in SSH config
+# Existing entries will be updated to this default on first load
+default_ssh_agent = true

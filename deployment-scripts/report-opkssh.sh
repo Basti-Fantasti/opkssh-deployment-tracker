@@ -21,6 +21,7 @@ fi
 TRACKER_URL="${TRACKER_URL:-}"
 TRACKER_USER="${TRACKER_USER:-}"
 TRACKER_PASS="${TRACKER_PASS:-}"
+SSH_AGENT="${SSH_AGENT:-true}"
 HOST_ALIAS=""
 FORCE_STATUS=""
 
@@ -47,6 +48,8 @@ Options:
     --tracker-pass PASS     Password for tracker basic auth
     --alias ALIAS           Friendly alias for this host (used in SSH config)
     --status STATUS         Override status (success/incomplete/failed)
+    --ssh-agent             Enable SSH agent forwarding in SSH config (default: true)
+    --no-ssh-agent          Disable SSH agent forwarding in SSH config
     --dry-run               Show what would be reported without sending
     --help                  Show this help message
 
@@ -78,6 +81,14 @@ while [[ $# -gt 0 ]]; do
         --status)
             FORCE_STATUS="$2"
             shift 2
+            ;;
+        --ssh-agent)
+            SSH_AGENT="true"
+            shift
+            ;;
+        --no-ssh-agent)
+            SSH_AGENT="false"
+            shift
             ;;
         --dry-run)
             DRY_RUN=true
@@ -219,6 +230,12 @@ report_to_tracker() {
         alias_field="\"alias\": \"${HOST_ALIAS}\","
     fi
 
+    # Convert SSH_AGENT string to JSON boolean
+    local ssh_agent_bool="false"
+    if [[ "$SSH_AGENT" == "true" ]]; then
+        ssh_agent_bool="true"
+    fi
+
     local json_payload=$(cat << EOF
 {
     "hostname": "${HOSTNAME_INFO}",
@@ -228,6 +245,7 @@ report_to_tracker() {
     "status": "${INSTALL_STATUS}",
     "opkssh_version": "${OPKSSH_VERSION}",
     "os_info": "${OS_INFO}",
+    "ssh_agent": ${ssh_agent_bool},
     "error": "${INSTALL_ISSUES}"
 }
 EOF
