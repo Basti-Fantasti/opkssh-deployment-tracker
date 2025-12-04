@@ -17,11 +17,127 @@ password = "your-secure-password-here"
 
 [ssh_config]
 # Default hostname mode for SSH config generation
-# "hostname" = use hostname as HostName (default)
-# "ip" = use IP address as HostName
+# true = use hostname as HostName (IP shown as comment)
+# false = use IP address as HostName (hostname shown as comment)
 default_use_hostname = true
 
 # Default SSH Agent forwarding setting for new deployments
 # When true, new deployments will have ForwardAgent enabled in SSH config
-# Existing entries will be updated to this default on first load
 default_ssh_agent = true
+
+# ============================================================================
+# DEPLOYMENT CONFIGURATION
+# Settings for bootstrap deployment feature
+# Replaces .env file distribution - single source of truth
+# ============================================================================
+
+[deployment]
+# Default SSH principal/user for deployments (root, pi, ubuntu, etc.)
+default_principal = "root"
+
+# Default user email for opkssh authentication
+# Can be overridden during bootstrap or left empty to prompt user
+default_user_email = ""
+
+[deployment.provider]
+# OpenID Provider Configuration for opkssh
+# These settings configure the OpenID Connect provider for SSH authentication
+
+# Provider issuer URL (your OIDC provider)
+# Example: "https://sso.example.com" or "https://accounts.google.com"
+issuer = "https://sso.example.com"
+
+# OAuth2 Client ID for opkssh
+# Get this from your OIDC provider's application settings
+client_id = "your-client-id-here"
+
+# Token expiry duration
+# Examples: "24h", "12h", "1h", "30m"
+expiry = "24h"
+
+# ============================================================================
+# BOOTSTRAP CONFIGURATION
+# Settings for one-command deployment feature
+# ============================================================================
+
+[bootstrap]
+# Token expiry in hours (how long bootstrap tokens remain valid)
+# Tokens can be reused within this window to deploy multiple servers
+token_expiry_hours = 1
+
+# Maximum bootstrap tokens that can be generated per hour per user
+# Prevents abuse/token generation spam
+max_tokens_per_hour = 10
+
+# Require HTTPS for bootstrap endpoints in production
+# Set to false for local development/testing only
+enable_https_only = false
+
+# Script version identifier (git commit hash or semantic version)
+# This gets embedded in deployment reports for tracking
+# Update this when deployment scripts change
+script_version = "1.0.0"
+
+# Encryption key for securing credentials in bootstrap tokens
+# IMPORTANT: This key must persist across container restarts!
+#
+# === AUTO-GENERATION (RECOMMENDED) ===
+# Leave this empty - the server will automatically:
+#   1. Check for environment variable BOOTSTRAP_ENCRYPTION_KEY
+#   2. Check for key in this config file
+#   3. Check for /data/encryption.key file
+#   4. Generate new key and save to /data/encryption.key (if none found)
+#
+# This auto-generation happens ONCE on first run, then persists.
+# The /data volume must be mounted for persistence across restarts.
+#
+# === ALTERNATIVE: Manual Key ===
+# Generate a key manually:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+#
+# Then either:
+#   Option 1: Set environment variable (recommended for Docker)
+#     docker run -e BOOTSTRAP_ENCRYPTION_KEY="your-key-here" ...
+#
+#   Option 2: Paste here (not recommended for security)
+#     encryption_key = "ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg="
+#
+# === KEY PRIORITY ===
+# 1. Environment variable BOOTSTRAP_ENCRYPTION_KEY (highest priority)
+# 2. This config file (if specified)
+# 3. /data/encryption.key file (auto-generated)
+# 4. Generate new key to /data/encryption.key (if none exist)
+#
+# === WARNING ===
+# - Changing the key invalidates ALL existing bootstrap tokens
+# - Do NOT commit encryption keys to version control
+# - Keep keys secret and secure
+# - Rotate periodically for security (invalidates old tokens)
+#
+encryption_key = ""  # Leave empty for auto-generation
+
+# ============================================================================
+# GITHUB INTEGRATION
+# Settings for fetching opkssh version information
+# ============================================================================
+
+[github]
+# Repository to check for latest opkssh releases
+# Format: "owner/repo"
+opkssh_repo = "openpubkey/opkssh"
+
+# How often to refresh the cached version info (in seconds)
+# Server fetches version once per interval, clients get instant cached response
+# 3600 = 1 hour (recommended)
+api_cache_seconds = 3600
+
+# Optional: GitHub Personal Access Token for higher rate limits
+# Without token: 60 requests/hour (sufficient with caching)
+# With token: 5000 requests/hour
+#
+# Generate at: https://github.com/settings/tokens
+# Required scopes: None (public repository access only)
+#
+# Recommended: Set via environment variable GITHUB_API_TOKEN
+# Alternative: Specify here (not recommended for security)
+api_token = ""
