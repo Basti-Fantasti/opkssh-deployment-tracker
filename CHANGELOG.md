@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.4] - 2025-12-05
 
 ### Added
 - **Automatic SSH Agent Configuration**: Deployment scripts now automatically configure SSH agent for target users
