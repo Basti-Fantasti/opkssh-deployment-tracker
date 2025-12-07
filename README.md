@@ -56,6 +56,12 @@ The result? Secure, modern SSH authentication without the hassle of key manageme
 
 - [About the Required Projects](#about-the-required-projects)
 - [Server Setup](#server-setup)
+- [Web Dashboard](#web-dashboard)
+  - [Main Dashboard Overview](#main-dashboard-overview)
+  - [Bootstrap Deployment Feature](#bootstrap-deployment-feature)
+  - [Deployment Management](#deployment-management)
+  - [SSH Config Generator](#ssh-config-generator)
+  - [API Documentation](#api-documentation)
 - [Client Scripts Usage](#client-scripts-usage)
 - [Configuration](#configuration)
 - [API Endpoints](#api-endpoints)
@@ -155,6 +161,187 @@ docker-compose restart
 docker-compose pull
 docker-compose up -d
 ```
+
+---
+
+## Web Dashboard
+
+The opkssh Deployment Tracker provides a comprehensive web-based dashboard for managing your deployments. Access it at `http://your-server-ip:8080` after starting the server.
+
+### Main Dashboard Overview
+
+![Main Dashboard](images/opkssh-1.png)
+
+The main dashboard provides:
+- **Deployment Statistics** - Quick overview showing total deployments, successful deployments, and failed deployments
+- **Deployment Table** - Comprehensive view of all tracked hosts with columns for:
+  - Hostname (clickable to view deployment history)
+  - Alias (friendly name for SSH config)
+  - IP Address
+  - SSH User
+  - SSH-Agent forwarding status (toggle on/off per host)
+  - Deployment Status (success/incomplete/failed)
+  - Timestamp of last report
+  - opkssh Version installed
+  - Operating System information
+  - Actions (Edit/Delete buttons)
+- **Generate Bootstrap Command** button for one-command deployments
+- **SSH Config Generator** with hostname/IP mode selection
+- **API Endpoints** quick access links
+
+![Dashboard with Deployments](images/opkssh-gui-added.png)
+
+Once you have deployments tracked, the dashboard shows all deployment details in an organized table. The hostname is clickable to view the complete deployment history timeline for that host.
+
+### Bootstrap Deployment Feature
+
+The bootstrap deployment feature enables one-command opkssh installation without manual script distribution or configuration files.
+
+#### Generate Bootstrap Command
+
+![Bootstrap Modal - Initial](images/opkssh-2-bootstrap.png)
+
+Click the "Generate Bootstrap Command" button to open the bootstrap modal where you can:
+- View the tracker URL (automatically populated)
+- Enable **Non-interactive mode** to pre-configure all deployment values for fully automated installation
+- Generate a time-limited deployment token
+
+![Bootstrap Modal - Generated](images/opkssh-3-bootstrap.png)
+
+After clicking "Generate", you receive:
+- A ready-to-use `curl | bash` command
+- Token expiry countdown (default: 1 hour)
+- One-click "Copy to Clipboard" functionality
+- Option to regenerate the token
+- Reusable token - use the same command on multiple servers within the expiry window
+
+#### Bootstrap Script in Action
+
+**On a fresh system without opkssh:**
+
+![Bootstrap Menu - New System](images/opkssh-menu-new-system.png)
+
+The bootstrap script automatically:
+- Detects that opkssh is not installed
+- Checks the latest available version
+- Presents a clean menu with options to install or cancel
+
+**On a system with existing opkssh installation:**
+
+![Bootstrap Menu - Existing Installation](images/opkssh-menu-existing-install.png)
+
+The smart bootstrap script:
+- Detects the installed opkssh version
+- Checks for available updates
+- Finds existing configuration in `/etc/opk`
+- Offers context-aware options:
+  - Reconfigure existing installation
+  - Report current status to tracker
+  - Cancel
+
+**Installation and Configuration Process:**
+
+![Installation Progress](images/opkssh-install-status.png)
+
+The bootstrap script handles the complete deployment process:
+1. Downloads and installs opkssh
+2. Configures OpenID provider settings
+3. Sets up user authorization
+4. Configures SSHD for opkssh authentication
+5. Sets up SSH agent forwarding (with multi-shell support: bash, zsh, fish)
+6. Reports deployment status to the tracker
+7. All with detailed progress feedback and error handling
+
+**Reporting to Tracker:**
+
+![Report to Tracker](images/opkssh-report-tracker.png)
+
+After installation or when using the "Report status" option, the script:
+- Collects hostname, alias, IP, user, and configuration details
+- Reports deployment status to the tracker server
+- Confirms successful registration
+
+### Deployment Management
+
+#### Edit Deployments
+
+![Edit Deployment](images/opkssh-gui-modify.png)
+
+Click the "Edit" button on any deployment to modify:
+- Hostname
+- Alias (friendly name)
+- IP Address
+- SSH User
+- Changes are saved immediately with visual feedback
+
+#### Delete Deployments
+
+Each deployment row has a "Delete" button that:
+- Shows a confirmation dialog before deletion
+- Immediately removes the deployment from the tracker
+- Updates the dashboard statistics
+
+#### Toggle SSH Agent Forwarding
+
+The "SSH-Agent" column contains checkboxes that allow you to:
+- Enable/disable SSH agent forwarding per host
+- Changes are saved automatically via API
+- Affects the generated SSH config (`ForwardAgent yes/no`)
+
+### SSH Config Generator
+
+The tracker can generate OpenSSH configuration for all successful deployments.
+
+**Using IP Address Mode:**
+
+![SSH Config - IP Mode](images/opkssh-gui-sshconfig.png)
+
+Select "Use IP Address" to generate SSH config with:
+- IP address in the `HostName` field
+- Hostname shown as a comment
+- Perfect for environments where DNS is unreliable
+
+**Using Hostname Mode:**
+
+![SSH Config - Hostname Mode](images/opkssh-gui-sshconfig-hostname.png)
+
+Select "Use Hostname" to generate SSH config with:
+- Hostname in the `HostName` field
+- IP address shown as a comment
+- Ideal when you have proper DNS resolution
+
+Both modes include:
+- User configuration
+- Identity file path
+- SSH agent forwarding setting (when enabled)
+- Timestamp of generation
+
+Click "Download SSH Config" to download the configuration file, which can be:
+- Copied directly into `~/.ssh/config`
+- Used with the `update-ssh-config.sh` script for automatic integration
+
+### API Documentation
+
+![API Documentation](images/opkssh-gui-api.png)
+
+The dashboard provides access to interactive API documentation at `/openapi.json`, showing all available endpoints:
+- **POST /report** - Submit deployment reports
+- **GET /reports** - Retrieve all deployment reports
+- **DELETE /reports** - Clear all reports
+- **GET /reports/{hostname}** - Get specific deployment
+- **DELETE /reports/{hostname}** - Delete specific deployment
+- **PATCH /reports/{hostname}** - Update deployment (e.g., SSH agent setting)
+- **GET /ssh-config** - Generate SSH configuration
+- **GET /health** - Health check endpoint
+- **POST /api/bootstrap-token** - Create bootstrap deployment token
+- **GET /bootstrap** - Download bootstrap installation script
+- **GET /api/scripts/{script_name}** - Download deployment scripts
+- **GET /api/latest-opkssh-version** - Get latest opkssh version from GitHub
+- **GET /api/deployment-history/{hostname}** - View deployment timeline
+
+Each endpoint shows authentication requirements (lock icon) and supports the OpenAPI/Swagger specification.
+
+---
 
 ### Configuration Options
 
