@@ -2,6 +2,10 @@
 
 A comprehensive system for managing and tracking OpenPubkey SSH (opkssh) deployments across multiple Linux hosts.
 
+> [!note] Disclaimer
+> This project is not affiliated with the official opkssh or pocket-id projects. It is an independent tool designed to facilitate the deployment and management of opkssh installations.
+
+
 ## Overview
 
 This system consists of:
@@ -713,7 +717,7 @@ traceroute your-tracker-server
 
 ## Support
 
-For issues, questions, or contributions, please refer to the project documentation or contact your system administrator.
+For issues, questions, or contributions, open an issue in this repo.
 
 ---
 
