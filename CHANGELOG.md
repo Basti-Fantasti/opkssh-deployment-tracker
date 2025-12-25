@@ -1,5 +1,81 @@
 # Changelog
 
+## [0.7.0] - 2025-12-25
+
+### Added
+
+#### Deployment Grouping Feature
+Organize deployments into logical groups with visual distinction and filtering capabilities.
+
+- **Group Assignment**:
+  - Single group per deployment (optional, defaults to "Ungrouped")
+  - Implicit group creation: typing a new group name auto-creates it
+  - Group field added to deployment reports and bootstrap tokens
+  - Existing deployments gracefully handled as "Ungrouped"
+
+- **Group Management Modal**:
+  - Access via "Manage Groups" button in dashboard header
+  - View all groups with deployment counts
+  - Rename groups (updates all associated deployments)
+  - Delete groups (moves deployments to "Ungrouped")
+  - Color picker for visual customization
+  - Real-time updates without page reload
+
+- **Group Color System**:
+  - 8-color default palette for auto-created groups
+  - Custom color picker in group management
+  - Colors displayed as badges in dashboard table
+  - Consistent coloring across all UI components
+
+- **Dashboard Filtering**:
+  - Group selector dropdown in dashboard header
+  - Filter deployments by group or view all
+  - Statistics cards update to show filtered counts
+  - Smooth transitions when switching groups
+
+- **Inline Group Editing**:
+  - Click group badge in table to edit
+  - Dropdown with existing groups + "Create new group" option
+  - Type custom name to create new group on-the-fly
+  - Cancel/save controls with keyboard support (Escape/Enter)
+
+- **SSH Config Integration**:
+  - Group filter in SSH config download modal
+  - Generate config for specific group or all deployments
+  - Group comments in generated SSH config files
+  - API support: `GET /ssh-config?group=production`
+
+- **Bootstrap Token Groups**:
+  - Group field in bootstrap modal with autocomplete
+  - Pre-populate dropdown from existing groups
+  - Allow creating new group by typing name
+  - Selected group embedded in generated token
+  - Deployed hosts auto-assigned to specified group
+
+- **New API Endpoints**:
+  - `GET /api/groups` - List all groups with deployment counts and colors
+  - `PUT /api/groups/{name}` - Rename group or update color/description
+  - `DELETE /api/groups/{name}` - Delete group (deployments become Ungrouped)
+  - `GET /reports?group={name}` - Filter deployments by group
+
+- **Data Storage**:
+  - New `groups.json` file for group metadata (color, description)
+  - `GroupStore` class for group management operations
+  - Automatic color assignment from palette for new groups
+  - Migration-safe: works with existing deployments
+
+### Changed
+- Version bumped to 0.7.0
+- Dashboard table includes new "Group" column with colored badges
+- Statistics cards now group-aware (show filtered vs total counts)
+- Bootstrap token payload extended with optional `group` field
+
+### Technical Details
+- `GroupStore` class manages group persistence and operations
+- Hybrid approach: groups created implicitly, managed explicitly
+- Color palette cycles through 8 distinct colors for auto-creation
+- All group operations maintain referential integrity with deployments
+
 ## [0.6.4] - 2025-12-05
 
 ### Added
