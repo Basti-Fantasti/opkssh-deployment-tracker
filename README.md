@@ -62,6 +62,7 @@ The result? Secure, modern SSH authentication without the hassle of key manageme
 - [Server Setup](#server-setup)
 - [Web Dashboard](#web-dashboard)
   - [Main Dashboard Overview](#main-dashboard-overview)
+  - [Deployment Grouping](#deployment-grouping)
   - [Bootstrap Deployment Feature](#bootstrap-deployment-feature)
   - [Deployment Management](#deployment-management)
   - [SSH Config Generator](#ssh-config-generator)
@@ -183,12 +184,15 @@ The main dashboard provides:
   - Alias (friendly name for SSH config)
   - IP Address
   - SSH User
+  - Group (colored badge, clickable for inline editing)
   - SSH-Agent forwarding status (toggle on/off per host)
   - Deployment Status (success/incomplete/failed)
   - Timestamp of last report
   - opkssh Version installed
   - Operating System information
   - Actions (Edit/Delete buttons)
+- **Group Filter Dropdown** - Filter deployments by group
+- **Manage Groups Button** - Access group management modal
 - **Generate Bootstrap Command** button for one-command deployments
 - **SSH Config Generator** with hostname/IP mode selection
 - **API Endpoints** quick access links
@@ -196,6 +200,42 @@ The main dashboard provides:
 ![Dashboard with Deployments](images/opkssh-gui-added.png)
 
 Once you have deployments tracked, the dashboard shows all deployment details in an organized table. The hostname is clickable to view the complete deployment history timeline for that host.
+
+### Deployment Grouping
+
+> **New in v0.7.0**
+
+Organize your deployments into logical groups with visual distinction and filtering capabilities.
+
+#### Group Assignment
+
+- **Single group per deployment** - Each deployment can belong to one group (optional, defaults to "Ungrouped")
+- **Implicit group creation** - Simply type a new group name to auto-create it
+- **Bootstrap token support** - Pre-assign group when generating bootstrap commands
+- **Inline editing** - Click the group badge in the table to quickly change a deployment's group
+
+#### Group Management Modal
+
+Access via the "Manage Groups" button in the dashboard header to:
+- View all groups with deployment counts
+- Rename groups (updates all associated deployments automatically)
+- Delete groups (moves deployments to "Ungrouped")
+- Customize group colors using the color picker
+- Real-time updates without page reload
+
+#### Dashboard Filtering
+
+- **Group selector dropdown** in the dashboard header
+- Filter deployments by specific group or view all
+- Statistics cards update to show filtered counts
+- Smooth transitions when switching between groups
+
+#### SSH Config with Groups
+
+When downloading SSH config:
+- Select a specific group to generate config for only those deployments
+- Group comments are included in the generated SSH config file
+- API support: `GET /ssh-config?group=production`
 
 ### Bootstrap Deployment Feature
 
@@ -207,6 +247,7 @@ The bootstrap deployment feature enables one-command opkssh installation without
 
 Click the "Generate Bootstrap Command" button to open the bootstrap modal where you can:
 - View the tracker URL (automatically populated)
+- Select a **Group** for the deployment (with autocomplete from existing groups)
 - Enable **Non-interactive mode** to pre-configure all deployment values for fully automated installation
 - Generate a time-limited deployment token
 
@@ -319,6 +360,7 @@ Both modes include:
 - Identity file path
 - SSH agent forwarding setting (when enabled)
 - Timestamp of generation
+- Group filtering option (generate config for specific group or all)
 
 Click "Download SSH Config" to download the configuration file, which can be:
 - Copied directly into `~/.ssh/config`
@@ -579,6 +621,7 @@ Submit a deployment report.
   "alias": "web-prod",
   "ip": "192.168.1.100",
   "user": "root",
+  "group": "production",
   "status": "success",
   "opkssh_version": "0.3.0",
   "os_info": "Debian 12",
@@ -591,6 +634,9 @@ Get all deployment reports.
 
 **Requires authentication if enabled.**
 
+**Query parameters:**
+- `group` - Filter by group name (optional)
+
 **Response:**
 ```json
 [
@@ -599,6 +645,7 @@ Get all deployment reports.
     "alias": "web-prod",
     "ip": "192.168.1.100",
     "user": "root",
+    "group": "production",
     "status": "success",
     "opkssh_version": "0.3.0",
     "os_info": "Debian 12",
@@ -627,8 +674,45 @@ Generate SSH config for all successful deployments.
 - `identity_file` - SSH identity file path (default: ~/.ssh/id_ecdsa)
 - `prefix` - Prefix for host aliases (optional)
 - `use_hostname` - Use hostname instead of IP (default: true)
+- `group` - Filter by group name (optional)
 
 **Response:** OpenSSH config format text
+
+### `GET /api/groups`
+List all groups with deployment counts and colors.
+
+**Requires authentication if enabled.**
+
+**Response:**
+```json
+[
+  {
+    "name": "production",
+    "color": "#4CAF50",
+    "description": "",
+    "count": 5
+  }
+]
+```
+
+### `PUT /api/groups/{name}`
+Rename a group or update its color/description.
+
+**Requires authentication if enabled.**
+
+**Request body:**
+```json
+{
+  "new_name": "prod-servers",
+  "color": "#2196F3",
+  "description": "Production servers"
+}
+```
+
+### `DELETE /api/groups/{name}`
+Delete a group. Associated deployments become "Ungrouped".
+
+**Requires authentication if enabled.**
 
 ### `GET /health`
 Health check endpoint (no authentication required).
