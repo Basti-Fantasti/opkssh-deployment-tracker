@@ -8,12 +8,39 @@ host = "0.0.0.0"
 port = 8080
 
 [auth]
-# Enable basic authentication (recommended when exposed to internet)
-enabled = true
+# Authentication mode: "none", "basic", or "oidc"
+# - none: No authentication required (development only)
+# - basic: HTTP Basic Auth with username/password
+# - oidc: OpenID Connect with SSO provider (uses PKCE)
+mode = "basic"
+
+# === For mode = "basic" ===
 # Username for basic auth
 username = "admin"
 # Password for basic auth (CHANGE THIS!)
 password = "your-secure-password-here"
+
+# === For mode = "oidc" ===
+[auth.oidc]
+# Redirect URI registered with your SSO provider
+# Must match exactly what's configured in SSO
+# For production: https://your-tracker-domain/auth/callback
+# For development: http://localhost:8080/auth/callback
+redirect_uri = "http://localhost:8080/auth/callback"
+
+# Emails allowed to access dashboard (all have admin rights)
+# Users not in this list will see "Access Denied" after SSO login
+allowed_emails = [
+    "admin@example.com"
+]
+
+# Session persistence file (in /data volume for Docker)
+# Sessions survive server restarts when this is configured
+session_file = "/data/sessions.json"
+
+# Cookie security settings
+# Set to false for local development without HTTPS
+secure_cookies = true
 
 [ssh_config]
 # Default hostname mode for SSH config generation

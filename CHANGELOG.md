@@ -1,5 +1,90 @@
 # Changelog
 
+## [0.8.0] - 2026-01-13
+
+### Added
+
+#### OIDC Authentication with SSO Login
+Full OpenID Connect authentication support using PKCE (Proof Key for Code Exchange).
+
+- **OIDC Authentication Flow**:
+  - Reuses the same SSO provider configured for opkssh deployments (`[deployment.provider]`)
+  - Automatic OIDC Discovery via `{issuer}/.well-known/openid-configuration`
+  - PKCE-based authorization code flow (S256 challenge method)
+  - Email-based access control via `allowed_emails` configuration
+  - Secure session management with encrypted cookies
+  - Support for any OIDC-compliant provider (Pocket ID, Keycloak, Auth0, etc.)
+
+- **SSO Logout (RP-Initiated Logout)**:
+  - Proper logout flow that terminates both local and SSO sessions
+  - Redirects to SSO provider's `end_session_endpoint` with `id_token_hint`
+  - Post-logout redirect back to tracker's `/auth/logged-out` page
+  - Prevents auto-login after logout
+
+- **Session-Based Basic Auth**:
+  - Basic Auth mode now uses session cookies for proper logout support
+  - Login creates a session instead of relying on browser credential cache
+  - Logout invalidates session and shows "Logged Out" page
+  - Browser credential cache cleared via realm change technique
+
+- **New Authentication Modules**:
+  - `auth.py`: OIDC authentication handler with PKCE, token validation, session management
+  - `session_store.py`: Thread-safe session store with file-based persistence and automatic expiry cleanup
+
+- **New API Endpoints**:
+  - `GET /auth/login` - Initiates authentication (Basic form or OIDC redirect)
+  - `GET /auth/callback` - OIDC callback for authorization code exchange
+  - `GET /auth/logout` - Terminates session (local or SSO logout)
+  - `GET /auth/logged-out` - Post-logout landing page
+  - `GET /auth/clear-credentials` - Clears browser credential cache (Basic mode)
+
+- **Configuration Options** (`[auth.oidc]` section):
+  - `redirect_uri` - OIDC callback URL (must match SSO provider registration)
+  - `allowed_emails` - Email allowlist for access control
+  - `session_file` - Path to session persistence file (default: `/data/sessions.json`)
+  - `secure_cookies` - Enable secure cookie flag (set `false` for local dev without HTTPS)
+
+- **Docker Updates**:
+  - Dockerfile now includes `auth.py` and `session_store.py` modules
+  - Dependencies updated: `httpx`, `authlib`, `PyJWT`, `itsdangerous`
+  - Multi-network example for containers needing internet access for OIDC
+
+- **OIDC Provider Configuration Requirements**:
+  - Add Callback URL to your OIDC client: `https://your-tracker-domain/auth/callback`
+  - Add Post-Logout URL to your OIDC client: `https://your-tracker-domain/auth/logged-out`
+  - Same client ID as configured in `[deployment.provider]` section
+
+- **Documentation**:
+  - Comprehensive OIDC setup guide in README.md
+  - Migration guide for upgrading from v0.7.x (`enabled = true/false` → `mode = "basic/oidc/none"`)
+  - Docker network configuration for OIDC connectivity
+  - OIDC troubleshooting section
+  - Authentication endpoints documentation
+
+### Breaking Changes
+- **Configuration format changed**: `[auth] enabled = true/false` replaced with `[auth] mode = "basic/oidc/none"`
+  - `enabled = true` → `mode = "basic"`
+  - `enabled = false` → `mode = "none"`
+  - See [Migration Guide](README.md#upgrading-from-previous-versions) in README.md
+
+### Changed
+- Version bumped to 0.8.0
+- Dashboard logout button now works for both Basic and OIDC modes
+- Authentication verification refactored to support session cookies
+- OIDC initialization happens on server startup with session cleanup
+
+### Fixed
+- Logout now properly terminates SSO sessions (previously only cleared local session)
+- Basic Auth logout no longer allows auto-login via cached browser credentials
+- Private browsing windows no longer auto-authenticate
+
+### Technical Details
+- `OIDCAuth` class handles complete OIDC flow with PKCE
+- `SessionStore` provides thread-safe session management with file persistence
+- JWKS caching prevents repeated key fetches during token validation
+- Automatic cleanup of expired sessions on load and via periodic task
+- State and code verifier stored in signed cookies for CSRF/replay protection
+
 ## [0.7.0] - 2025-12-25
 
 ### Added

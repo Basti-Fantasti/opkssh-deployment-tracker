@@ -69,6 +69,8 @@ The result? Secure, modern SSH authentication without the hassle of key manageme
   - [API Documentation](#api-documentation)
 - [Client Scripts Usage](#client-scripts-usage)
 - [Configuration](#configuration)
+- [OIDC Authentication Setup](#oidc-authentication-setup)
+- [Upgrading from Previous Versions](#upgrading-from-previous-versions)
 - [API Endpoints](#api-endpoints)
 - [Troubleshooting](#troubleshooting)
 
@@ -116,7 +118,7 @@ The tracking server runs as a Docker container using a pre-built image.
    **Important:** Change the default password!
    ```toml
    [auth]
-   enabled = true
+   mode = "basic"  # Authentication mode: "none", "basic", or "oidc"
    username = "admin"
    password = "your-secure-password-here"  # CHANGE THIS!
    ```
@@ -399,7 +401,7 @@ host = "0.0.0.0"  # Bind to all interfaces
 port = 8080       # Default port
 
 [auth]
-enabled = true              # Enable/disable authentication
+mode = "basic"              # Auth mode: "none", "basic", or "oidc"
 username = "admin"          # Basic auth username
 password = "change-me"      # Basic auth password
 
@@ -595,13 +597,242 @@ host = "0.0.0.0"
 port = 8080
 
 [auth]
-enabled = true
+mode = "basic"  # Auth mode: "none", "basic", or "oidc"
 username = "admin"
 password = "secure-password"
 
 [ssh_config]
 default_use_hostname = true
 ```
+
+---
+
+## OIDC Authentication Setup
+
+The tracker supports three authentication modes:
+
+### Mode: none
+No authentication required. Use only for development.
+
+### Mode: basic
+HTTP Basic Auth with username/password (default). Session-based authentication enables proper logout functionality - users authenticate once and receive a session cookie.
+
+**How Basic Auth Logout Works:**
+- On login, credentials are verified and a session is created
+- Session cookie (`opkssh_session`) is used for subsequent requests
+- Logout invalidates the session and redirects to a "Logged Out" page
+- Browser credential cache is cleared via realm change technique
+
+### Mode: oidc
+OpenID Connect with your SSO provider using PKCE (Proof Key for Code Exchange).
+
+> **Note:** The tracker reuses the same OIDC provider you configured for opkssh deployments in the `[deployment.provider]` section. This means you only need to configure one SSO provider, and it will be used for both SSH authentication (via opkssh) and tracker dashboard access.
+
+**How OIDC Works:**
+1. User clicks "Login" and is redirected to SSO provider
+2. Tracker uses OIDC Discovery to fetch endpoints from `{issuer}/.well-known/openid-configuration`
+3. User authenticates with SSO provider (using PKCE for security)
+4. SSO redirects back with authorization code
+5. Tracker exchanges code for tokens using PKCE code verifier
+6. User email is verified against `allowed_emails` list
+7. Session is created with secure cookie
+
+**OIDC Discovery:** Only the issuer URL from `[deployment.provider]` is needed - all other endpoints (authorization, token, logout) are automatically discovered from the provider's well-known configuration.
+
+#### OIDC Configuration
+
+1. **Configure config.toml:**
+
+```toml
+[auth]
+mode = "oidc"
+
+[auth.oidc]
+# Redirect URI must match exactly what's registered with SSO provider
+redirect_uri = "https://your-tracker-domain/auth/callback"
+
+# Only these emails can access the dashboard
+allowed_emails = [
+    "admin@example.com",
+    "user@example.com"
+]
+
+# Session persistence (required for Docker)
+session_file = "/data/sessions.json"
+
+# Cookie security - set to false only for local development without HTTPS
+secure_cookies = true
+```
+
+2. **Configure your OIDC Provider:**
+
+Add the tracker's URLs to your existing opkssh OIDC client application. Since the tracker reuses the same client configured in `[deployment.provider]`, you just need to add additional redirect URIs.
+
+**Client ID:** Use the same client ID from `[deployment.provider].client_id`
+
+**Add these Redirect URIs to your OIDC client:**
+
+| URL Type | Production | Local Development |
+|----------|------------|-------------------|
+| **Callback URL** | `https://your-tracker-domain/auth/callback` | `http://localhost:8080/auth/callback` |
+| **Post-Logout URL** | `https://your-tracker-domain/auth/logged-out` | `http://localhost:8080/auth/logged-out` |
+
+> **Important:** The `redirect_uri` in your `config.toml` must exactly match what's registered in your OIDC provider (including protocol, domain, and path).
+
+**Example OIDC Provider Configuration (Pocket ID / Keycloak / etc.):**
+
+```
+Client ID: your-opkssh-client-id
+Client Type: Public (no secret)
+PKCE: Enabled (S256)
+Grant Type: Authorization Code
+
+Redirect URIs:
+  - https://your-tracker-domain/auth/callback
+  - http://localhost:8080/auth/callback  (for development)
+
+Post-Logout Redirect URIs:
+  - https://your-tracker-domain/auth/logged-out
+  - http://localhost:8080/auth/logged-out  (for development)
+
+Scopes: openid, email, profile
+```
+
+3. **SSO Logout (RP-Initiated Logout)**
+
+The tracker supports proper SSO logout using RP-Initiated Logout:
+- When user clicks "Logout", they are redirected to SSO provider's `end_session_endpoint`
+- SSO provider terminates the session
+- User is redirected back to tracker's `/auth/logged-out` page
+- This prevents auto-login after logout
+
+**Required SSO Provider Settings:**
+- Enable RP-Initiated Logout (most providers support this)
+- Register post-logout redirect URI: `https://your-tracker-domain/auth/logged-out`
+
+4. **Docker Network Requirements**
+
+For OIDC authentication to work in Docker, the container must be able to reach your SSO provider:
+
+```yaml
+# If using a custom network without internet access (e.g., for reverse proxy)
+# Add a second network with IP masquerade enabled:
+services:
+  opkssh-tracker:
+    networks:
+      - your-internal-network     # For reverse proxy
+      - internet-access           # For OIDC provider access
+
+networks:
+  your-internal-network:
+    external: true
+  internet-access:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+```
+
+**Verify connectivity:**
+```bash
+docker exec -it opkssh-tracker python -c "import httpx; print(httpx.get('https://your-sso-provider/.well-known/openid-configuration').status_code)"
+```
+
+---
+
+## Upgrading from Previous Versions
+
+### Migration from v0.7.x to v0.8.x (Authentication Changes)
+
+Version 0.8.0 introduces a new authentication configuration format. If you're upgrading from an older version, follow this guide.
+
+#### Old Configuration Format (v0.6.x - v0.7.x)
+
+```toml
+[auth]
+enabled = true        # REMOVED - no longer used
+username = "admin"
+password = "secret"
+```
+
+#### New Configuration Format (v0.8.x+)
+
+```toml
+[auth]
+mode = "basic"        # NEW - replaces "enabled" (options: "none", "basic", "oidc")
+username = "admin"
+password = "secret"
+
+# NEW - Required only for mode = "oidc"
+[auth.oidc]
+redirect_uri = "https://your-tracker-domain/auth/callback"
+allowed_emails = ["admin@example.com"]
+session_file = "/data/sessions.json"
+secure_cookies = true
+```
+
+#### Migration Steps
+
+1. **Open your `config.toml`**
+
+2. **Replace the `[auth]` section:**
+
+   | Old Setting | New Setting | Notes |
+   |-------------|-------------|-------|
+   | `enabled = true` | `mode = "basic"` | For HTTP Basic Auth |
+   | `enabled = false` | `mode = "none"` | No authentication |
+   | *(new)* | `mode = "oidc"` | For SSO login |
+
+3. **For Basic Auth users** (most common):
+   ```toml
+   # Before (v0.7.x)
+   [auth]
+   enabled = true
+   username = "admin"
+   password = "your-password"
+
+   # After (v0.8.x)
+   [auth]
+   mode = "basic"
+   username = "admin"
+   password = "your-password"
+   ```
+
+4. **For OIDC users** (new feature):
+   ```toml
+   [auth]
+   mode = "oidc"
+
+   [auth.oidc]
+   redirect_uri = "https://your-tracker-domain/auth/callback"
+   allowed_emails = ["your-email@example.com"]
+   session_file = "/data/sessions.json"
+   secure_cookies = true
+   ```
+
+5. **Restart the container:**
+   ```bash
+   docker-compose restart
+   ```
+
+#### Quick Reference: What Changed
+
+| Change | Action Required |
+|--------|-----------------|
+| `enabled = true/false` removed | Replace with `mode = "basic"` or `mode = "none"` |
+| New `mode` setting | Add `mode = "basic"`, `"oidc"`, or `"none"` |
+| New `[auth.oidc]` section | Add only if using OIDC authentication |
+| Logout now works properly | No action needed - automatic improvement |
+
+#### Verify Migration
+
+After updating, verify the server starts correctly:
+```bash
+docker-compose logs -f | head -50
+```
+
+Look for:
+- `Auth mode: basic` or `Auth mode: oidc` - confirms new config is loaded
+- No errors about missing configuration keys
 
 ---
 
@@ -720,6 +951,27 @@ Health check endpoint (no authentication required).
 ### `GET /`
 Web dashboard showing all deployments with statistics.
 
+### Authentication Endpoints
+
+#### `GET /auth/login`
+Initiates authentication flow.
+- **Basic mode**: Shows login form or processes credentials
+- **OIDC mode**: Redirects to SSO provider's authorization endpoint
+
+#### `GET /auth/callback`
+OIDC callback endpoint (OIDC mode only).
+- Receives authorization code from SSO provider
+- Exchanges code for tokens using PKCE
+- Creates session and redirects to dashboard
+
+#### `GET /auth/logout`
+Terminates user session.
+- **Basic mode**: Invalidates session, shows logged-out page
+- **OIDC mode**: Redirects to SSO provider's `end_session_endpoint` for full logout
+
+#### `GET /auth/logged-out`
+Post-logout landing page. Displayed after successful logout from SSO provider.
+
 ---
 
 ## Troubleshooting
@@ -768,7 +1020,34 @@ cat config.toml
 **"Authentication failed":**
 - Verify `TRACKER_USER` and `TRACKER_PASS` in `.env`
 - Verify they match `server/config.toml`
-- Check if auth is enabled: `[auth] enabled = true`
+- Check auth mode in config: `[auth] mode = "basic"` or `"oidc"`
+
+### OIDC Issues
+
+**"Connect timeout" or "Connection refused" during login:**
+- Container cannot reach SSO provider
+- Check Docker network configuration (see [Docker Network Requirements](#docker-network-requirements))
+- Verify DNS resolution: `docker exec opkssh-tracker nslookup your-sso-provider`
+- Test connectivity: `docker exec opkssh-tracker curl -I https://your-sso-provider`
+
+**"Access denied for email@example.com":**
+- Email not in `allowed_emails` list in config.toml
+- Add the email to the list and restart the container
+
+**"Invalid state parameter" or "Invalid code verifier":**
+- PKCE verification failed - usually means cookies expired
+- Clear browser cookies and try again
+- Check that `redirect_uri` matches exactly (including trailing slashes)
+
+**Logout redirects back to logged-in state:**
+- SSO provider session still active
+- Ensure RP-Initiated Logout is configured (see [SSO Logout](#sso-logout-rp-initiated-logout))
+- Register post-logout redirect URI with your SSO provider
+
+**"No matching key found in JWKS":**
+- Token signing key not found in provider's JWKS
+- Clear the OIDC cache by restarting the container
+- Check if your SSO provider rotated keys recently
 
 ### Network Issues
 
