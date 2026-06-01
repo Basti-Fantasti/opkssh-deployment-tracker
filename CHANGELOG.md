@@ -2,6 +2,11 @@
 
 ## [0.9.0] - 2026-06-01
 
+### Added
+- **Clickable column sorting on the dashboard** — sort the deployment table by hostname
+  or by group by clicking the column header. The selected column and direction persist
+  across page reloads, and "Ungrouped" always sorts last.
+
 ### Changed
 
 #### Dashboard and Auth Page Redesign
@@ -34,9 +39,23 @@ framework added, no functionality changed.
   - Single-row group reassignment updates the badge in place instead of reloading
 
 ### Fixed
+
+#### Bootstrap and report persistence
+- Re-reporting a host no longer clears its alias or group. An empty alias or group in an
+  incoming report now keeps the previously stored value — clearing is done from the
+  dashboard, not by sending an empty report.
+- Bootstrap tokens now carry the preset group and non-interactive overrides through to the
+  generated script; previously these were silently dropped.
+- The bootstrap script fetches the host's existing alias and group from the tracker before
+  reporting, and preserves the group when re-run on an already-tracked host.
+- The interactive "Hostname alias" prompt now defaults to the alias already recorded on the
+  tracker (falling back to the hostname), so re-running bootstrap no longer resets a
+  customized alias.
+
+#### UI
 - Login page CSS no longer renders broken: the page previously emitted literal `{{`/`}}`
   braces because the template was returned without being formatted; moving styles to the
-  external stylesheet resolves it
+  external stylesheet resolves it.
 
 ## [0.8.0] - 2026-01-13
 
