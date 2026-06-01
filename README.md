@@ -2,7 +2,7 @@
 
 A comprehensive system for managing and tracking OpenPubkey SSH (opkssh) deployments across multiple Linux hosts.
 
-> [!note] Disclaimer
+> **Disclaimer**
 > This project is not affiliated with the official opkssh or pocket-id projects. It is an independent tool designed to facilitate the deployment and management of opkssh installations.
 
 
@@ -184,6 +184,7 @@ The opkssh Deployment Tracker provides a comprehensive web-based dashboard for m
 > update only — no configuration or API changes, and existing deployments are unaffected.
 
 ![Main Dashboard](images/opkssh-1.png)
+![Main Dashboard](images/opkssh-1b.png)
 
 The main dashboard provides:
 - **Deployment Statistics** - Quick overview showing total deployments, successful deployments, and failed deployments
