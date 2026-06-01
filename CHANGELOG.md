@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.9.0] - 2026-06-01
+
+### Changed
+
+#### Dashboard and Auth Page Redesign
+Full visual refresh of the web UI, working with the existing vanilla-CSS stack — no
+framework added, no functionality changed.
+
+- **Shared stylesheet**:
+  - All five pages (dashboard, login, access-denied, logout, logged-out) now link a
+    single stylesheet served from `GET /static/app.css` instead of each embedding its
+    own `<style>` block — removes the duplicated CSS that had drifted between pages
+  - Design tokens (CSS custom properties) for colours, surfaces, shadows, and radii
+  - One indigo accent colour; green and red are reserved for success/failure only
+  - `Outfit` display font with a system fallback; tabular figures for the data table,
+    stat counters, and timestamps
+  - Branded SVG favicon served from `GET /static/favicon.svg`
+
+- **Responsive and accessibility fixes**:
+  - Added `charset` and `viewport` meta tags to every page — the dashboard is now
+    usable on mobile (previously rendered at desktop width with no viewport tag)
+  - Deployment table wrapped for horizontal scrolling on small screens
+  - Visible keyboard focus rings and pressed-state feedback on interactive elements
+  - Centred auth pages use `100dvh` to avoid the mobile-browser viewport jump
+
+- **Interaction polish**:
+  - Replaced all native `alert()`/`confirm()`/`prompt()` calls with non-blocking
+    toasts and styled in-page dialogs
+  - Deployment status shown as a coloured pill badge instead of plain red/green text
+  - Timestamps rendered in a readable format with the raw value in the tooltip
+  - Composed empty state with a call to action when no deployments exist
+  - Single-row group reassignment updates the badge in place instead of reloading
+
+### Fixed
+- Login page CSS no longer renders broken: the page previously emitted literal `{{`/`}}`
+  braces because the template was returned without being formatted; moving styles to the
+  external stylesheet resolves it
+
 ## [0.8.0] - 2026-01-13
 
 ### Added

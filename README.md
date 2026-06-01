@@ -177,6 +177,12 @@ The opkssh Deployment Tracker provides a comprehensive web-based dashboard for m
 
 ### Main Dashboard Overview
 
+> **New in v0.9.0** — The dashboard and authentication pages were redesigned. A shared
+> stylesheet replaces the per-page CSS, status is shown as colored pill badges, timestamps
+> are formatted for readability, native browser pop-ups are replaced with non-blocking
+> toasts and in-page dialogs, and the layout is now responsive on mobile. This is a visual
+> update only — no configuration or API changes, and existing deployments are unaffected.
+
 ![Main Dashboard](images/opkssh-1.png)
 
 The main dashboard provides:
